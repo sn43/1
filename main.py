@@ -1,60 +1,100 @@
-cell = [1, 2, 3,
-        4, 5, 6,
-        7, 8, 9]
-
-win_combinations = [[0, 1, 2],
-                    [3, 4, 5],
-                    [6, 7, 8],
-                    [0, 3, 6],
-                    [1, 4, 7],
-                    [2, 5, 8],
-                    [0, 4, 8],
-                    [2, 4, 6]]
+from exceptions import ShipPlacementError, ShotError
+from classes import *
 
 
-def print_game_board():
-    """ Функция отображения игрового поля. """
-    print(f' | {cell[0]} | {cell[1]} | {cell[2]} |')
-    print(f' | {cell[3]} | {cell[4]} | {cell[5]} |')
-    print(f' | {cell[6]} | {cell[7]} | {cell[8]} |')
+class Game:
+    def try_board(self):
+        """ Попытка генерации доски с кораблями """
+        lens = [3, 2, 2, 1, 1, 1, 1]
+        board = Board(size=self.size)
+        attemps = 0
+        for l in lens:
+            # Попытка поставить корабль для каждой длины корабля, начиная с большего
+            while True:
+                attemps += 1
+                if attemps > 3000:
+                    return None
+                ship = Ship(Dot(randint(0, self.size), randint(0, self.size)), l, randint(0, 1))
+                try:
+                    board.add_ship(ship)
+                    # Корабль поставлен
+                    break
+                except ShipPlacementError:
+                    # Следующая попытка
+                    pass
+
+        board.begin()
+        return board
+
+    def random_board(self):
+        """ Создать доску """
+        board = None
+        while board is None:
+            # Будет повторять итерацию, пока доска пустая
+            board = self.try_board()
+        return board
+
+    def __init__(self, size=6):
+        """ Создаем два поля """
+        self.size = size
+        user = self.random_board()
+        ai = self.random_board()
+        ai.hide = True
+        # Создаем игроков
+        self.ai = AI(ai, user)
+        self.us = User(user, ai)
+
+    def greet(self):
+        print('-------------------')
+        print(' Приветствуем вас  ')
+        print('      в игре       ')
+        print('    морской бой    ')
+        print('-------------------')
+        print('   Формат ввода:   ')
+        print('   координаты х у  ')
+        print(' х - номер строки  ')
+        print(' у - номер столбца ')
+        print('-------------------')
+
+    def loop(self):
+        """ Игровой цикл """
+        # Номер хода. Четный - игрок, нечетный - компьютер
+        num = 0
+        while True:
+            print("-" * 20)
+            print("Доска пользователя:")
+            print(self.us.board)
+            print("-" * 20)
+            print("Доска компьютера:")
+            print(self.ai.board)
+            if num % 2 == 0:
+                print("-" * 20)
+                print("Ходит пользователь!")
+                repeat = self.us.move()
+            else:
+                print("-" * 20)
+                print("Ходит компьютер!")
+                repeat = self.ai.move()
+                # При повторе хода значение в переменной num не меняется
+            if repeat:
+                num -= 1
+
+            if self.ai.board.defeat():
+                print("-" * 20)
+                print("Пользователь выиграл!")
+                break
+
+            if self.us.board.defeat():
+                print("-" * 20)
+                print("Компьютер выиграл!")
+                break
+            num += 1
+
+    def start(self):
+        """ Запуск игры """
+        self.greet()
+        self.loop()
 
 
-def player_step(step, side):
-    """ Функция реализации хода игрока. """
-    idx = cell.index(step)
-    cell[idx] = side
-
-
-def check_winner():
-    """ Функция проверки на наличие победных комбинаций. """
-    winner = None
-    for win in win_combinations:
-        if cell[win[0]] == 'X' and cell[win[1]] == 'X' and cell[win[2]] == 'X':
-            winner = 'Победил первый игрок (X)'
-        if cell[win[0]] == 'O' and cell[win[1]] == 'O' and cell[win[2]] == 'O':
-            winner = 'Победил второй игрок (O)'
-    return winner
-
-
-player_x = True
-endgame = False
-
-while endgame is False:
-    """ Функция, определяющая ход игры. """
-    print_game_board()
-    if player_x is True:
-        step = int(input('Игрок 1, введите номер клетки: '))
-        side = 'X'
-    else:
-        step = int(input('Игрок 2, введите номер клетки: '))
-        side = 'O'
-    player_step(step, side)
-    winner = check_winner()
-    if winner is None:
-        endgame = False
-    else:
-        endgame = True
-    player_x = not player_x
-
-print(print_game_board())
-print(f' Игра окончена. {winner}')
+g = Game()
+g.start()
